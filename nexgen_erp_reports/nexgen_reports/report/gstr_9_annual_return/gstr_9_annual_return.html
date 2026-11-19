@@ -1,0 +1,60 @@
+<div class="print-format">
+    <div class="text-center" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-weight: bold;">{{ filters.company }}</h3>
+        <h4 style="margin: 5px 0; color: #444;">GSTR-9 (Annual Return)</h4>
+        <p style="margin: 0; font-size: 12px; color: #666;">
+            <strong>Period:</strong> {{ frappe.datetime.str_to_user(filters.from_date) }} to {{ frappe.datetime.str_to_user(filters.to_date) }}
+        </p>
+    </div>
+
+    <table class="table table-bordered table-condensed" style="font-size: 11px;">
+        <thead style="background-color: #336699; color: #fff;">
+            <tr>
+                <th style="width: 45%;">Section Name</th>
+                <th class="text-right" style="width: 15%;">Taxable Value</th>
+                <th class="text-right" style="width: 10%;">Central Tax</th>
+                <th class="text-right" style="width: 10%;">State/UT Tax</th>
+                <th class="text-right" style="width: 10%;">Integrated Tax</th>
+                <th class="text-right" style="width: 10%;">Cess</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                {% if row.is_blank %}
+                    <tr><td colspan="6" style="height: 12px; border: none;"></td></tr>
+                {% elif row.is_header %}
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td colspan="6" style="color: #1e3a8a;">{{ row.section_name }}</td>
+                    </tr>
+                {% elif row.is_grandtotal %}
+                    <tr style="background-color: #ecfdf5; font-weight: bold; color: #065f46;">
+                        <td>{{ row.section_name }}</td>
+                        <td class="text-right">{{ format_currency(row.taxable_value) }}</td>
+                        <td class="text-right">{{ format_currency(row.cgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.sgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.igst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cess_amount) }}</td>
+                    </tr>
+                {% elif row.is_subtotal %}
+                    <tr style="background-color: #f8fafc; font-weight: bold;">
+                        <td>{{ row.section_name }}</td>
+                        <td class="text-right">{{ format_currency(row.taxable_value) }}</td>
+                        <td class="text-right">{{ format_currency(row.cgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.sgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.igst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cess_amount) }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td>{{ row.section_name }}</td>
+                        <td class="text-right">{{ format_currency(row.taxable_value) }}</td>
+                        <td class="text-right">{{ format_currency(row.cgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.sgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.igst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cess_amount) }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
