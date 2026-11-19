@@ -1,0 +1,57 @@
+<div class="print-format">
+    <div class="text-center" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-weight: bold;">{{ filters.company }}</h3>
+        <h4 style="margin: 5px 0; color: #555;">GSTR-2B Inward Summary</h4>
+        <p style="margin: 0; font-size: 12px; color: #777;">
+            <strong>Period:</strong> {{ frappe.datetime.str_to_user(filters.from_date) }} to {{ frappe.datetime.str_to_user(filters.to_date) }}
+        </p>
+    </div>
+
+    <table class="table table-bordered table-condensed" style="font-size: 11px;">
+        <thead style="background-color: #336699; color: #fff;">
+            <tr>
+                <th>Section Name</th>
+                <th class="text-right">No. of Records</th>
+                <th class="text-right">Taxable Amt</th>
+                <th class="text-right">Central Tax</th>
+                <th class="text-right">State/UT Tax</th>
+                <th class="text-right">Integrated Tax</th>
+                <th class="text-right">CESS</th>
+                <th class="text-right">Central ITC</th>
+                <th class="text-right">State/UT ITC</th>
+                <th class="text-right">Integrated ITC</th>
+                <th class="text-right">Cess ITC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                {% if row.is_header %}
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td colspan="11">{{ row.section_name }}</td>
+                    </tr>
+                {% elif row.is_itc_row or row.is_total_row %}
+                    <tr style="{% if row.is_total_row %}font-weight: bold; background-color: #e2e8f0;{% endif %}">
+                        <td>{{ row.section_name }}</td>
+                        <td class="text-center">{{ row.record_count or '-' }}</td>
+                        <td class="text-right">{{ format_currency(row.taxable_amount) }}</td>
+                        <td colspan="8"></td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td>{{ row.section_name }}</td>
+                        <td class="text-right">{{ row.record_count }}</td>
+                        <td class="text-right">{{ format_currency(row.taxable_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.sgst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.igst_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cess_amount) }}</td>
+                        <td class="text-right">{{ format_currency(row.cgst_itc) }}</td>
+                        <td class="text-right">{{ format_currency(row.sgst_itc) }}</td>
+                        <td class="text-right">{{ format_currency(row.igst_itc) }}</td>
+                        <td class="text-right">{{ format_currency(row.cess_itc) }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

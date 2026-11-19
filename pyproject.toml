@@ -1,0 +1,19 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "nexgen_erp_reports"
+authors = [
+    { name = "NexGen ERP Technologies", email = "info@nexgenerptechnologies.com"}
+]
+description = "Custom statutory and business reports for ERPNext by NexGen ERP Technologies"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "openpyxl"
+]
+
+[tool.flit.module]
+name = "nexgen_erp_reports"
