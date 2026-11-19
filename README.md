@@ -25,6 +25,13 @@ Official statutory annual GST return summary matching Form GSTR-9.
 - **Table 17 & 18**: HSN-wise summary of outward and inward supplies.
 - **Excel Export**: One-click download of the complete GSTR-9 multi-section formatted workbook.
 
+### 3. Ageing Receivables (FIFO Basis)
+Busy-style FIFO Accounts Receivable Ageing report.
+- **True FIFO Allocation**: Allocates credits against the oldest debit vouchers first, calculating exact ageing on remaining open amounts.
+- **Statutory Slabs**: `( 0 - 30 ) Days`, `( 31 - 60 ) Days`, `( 61 - 90 ) Days`, `( 91 - 120 ) Days`, `( 121 - 150 ) Days`, `( >= 151 ) Days`.
+- **Mathematical Accuracy**: The sum of all ageing slabs strictly reconciles with the customer's Closing Amount.
+- **Excel Export**: Formatted Excel download with company headers, date stamps, and column totals.
+
 ---
 
 ## Installation & Deployment
@@ -50,7 +57,7 @@ bench --site <your-site-name> migrate
 ## Compatibility
 - ERPNext v15 & v16
 - Frappe Framework v15 & v16
-- Works with standard ERPNext GST as well as the official India Compliance app.
+- Frappe Cloud ready
 
 ---
 
