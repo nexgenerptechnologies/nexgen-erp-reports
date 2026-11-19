@@ -64,7 +64,7 @@ def get_data(filters):
     rows = []
 
     # Helper function to create formatted section row
-    def add_row(name, data_dict=None, is_header=False, is_subtotal=False, is_grandtotal=False, indent=0):
+    def add_row(name, data_dict=None, section_code=None, is_header=False, is_subtotal=False, is_grandtotal=False, indent=0):
         if not data_dict:
             data_dict = {"taxable": 0.0, "cgst": 0.0, "sgst": 0.0, "igst": 0.0, "cess": 0.0}
 
@@ -74,6 +74,7 @@ def get_data(filters):
         rows.append({
             "section_name": display_name,
             "raw_name": name,
+            "section_code": section_code,
             "taxable_value": flt(data_dict.get("taxable", 0.0)),
             "cgst_amount": flt(data_dict.get("cgst", 0.0)),
             "sgst_amount": flt(data_dict.get("sgst", 0.0)),
@@ -99,23 +100,23 @@ def get_data(filters):
     # Table 4: Details of Advances, inward and outward supplies on which tax is payable
     # ----------------------------------------------------
     add_row("4. Details of Advances,inward and outward supplies on which tax is payable", is_header=True)
-    add_row("A. Supplies made to Unregistered Persons (B2C)", outward_data["4A"])
-    add_row("B. Supplies made to Registered persons (B2B)", outward_data["4B"])
-    add_row("C. Zero Rated Supply (Export) on payment of tax (except supplies to SEZs)", outward_data["4C"])
-    add_row("D. Supplies to SEZ on payment of tax", outward_data["4D"])
-    add_row("E. Deemed Exports", outward_data["4E"])
-    add_row("F. Advance (Received) on which tax has been paid but invoice has not been issued", outward_data["4F"])
-    add_row("G. Inward supplies on which tax is to be paid on reverse charge basis", outward_data["4G"])
-    add_row("G1. Supplies on which e-commerce operator is required to pay tax as per section 9(5) (including amendments, if any)[E-commerce operator to report] ", outward_data["4G1"])
+    add_row("A. Supplies made to Unregistered Persons (B2C)", outward_data["4A"], section_code="4A")
+    add_row("B. Supplies made to Registered persons (B2B)", outward_data["4B"], section_code="4B")
+    add_row("C. Zero Rated Supply (Export) on payment of tax (except supplies to SEZs)", outward_data["4C"], section_code="4C")
+    add_row("D. Supplies to SEZ on payment of tax", outward_data["4D"], section_code="4D")
+    add_row("E. Deemed Exports", outward_data["4E"], section_code="4E")
+    add_row("F. Advance (Received) on which tax has been paid but invoice has not been issued", outward_data["4F"], section_code="4F")
+    add_row("G. Inward supplies on which tax is to be paid on reverse charge basis", outward_data["4G"], section_code="4G")
+    add_row("G1. Supplies on which e-commerce operator is required to pay tax as per section 9(5) (including amendments, if any)[E-commerce operator to report] ", outward_data["4G1"], section_code="4G1")
 
     # 4H: Sub Total (A to G1)
     tot_4H = sum_dicts([outward_data["4A"], outward_data["4B"], outward_data["4C"], outward_data["4D"], outward_data["4E"], outward_data["4F"], outward_data["4G"], outward_data["4G1"]])
     add_row("H. Sub Total (A to G1 above)", tot_4H, is_subtotal=True)
 
-    add_row("I. Credit notes issued in respect of transactions specified in (B) to (E) above (-)", outward_data["4I"])
-    add_row("J. Debit notes issued in respect of transactions specified in (B) to (E) above (+)", outward_data["4J"])
-    add_row("K. Supplies /Tax declared through amendments(+)", outward_data["4K"])
-    add_row("L. Supplies /Tax declared through amendments(-)", outward_data["4L"])
+    add_row("I. Credit notes issued in respect of transactions specified in (B) to (E) above (-)", outward_data["4I"], section_code="4I")
+    add_row("J. Debit notes issued in respect of transactions specified in (B) to (E) above (+)", outward_data["4J"], section_code="4J")
+    add_row("K. Supplies /Tax declared through amendments(+)", outward_data["4K"], section_code="4K")
+    add_row("L. Supplies /Tax declared through amendments(-)", outward_data["4L"], section_code="4L")
 
     # 4M: Sub Total (I to L)
     tot_4M = sum_dicts([outward_data["4I"], outward_data["4J"], outward_data["4K"], outward_data["4L"]])
@@ -131,22 +132,22 @@ def get_data(filters):
     # Table 5: Details of Outward supplies on which tax is not payable
     # ----------------------------------------------------
     add_row("5. Details of Outward supplies on which tax is not payable", is_header=True)
-    add_row("A. Zero Rated Supply (Export) without payment of tax", outward_data["5A"])
-    add_row("B. Supplies to SEZs without payment of tax", outward_data["5B"])
-    add_row("C. Supplies on which tax is to be paid by the recipient on reverse charge basis", outward_data["5C"])
-    add_row("C1. Supplies on which tax is to be paid by e-commerce operators as per section 9(5)[Supplier to report] ", outward_data["5C1"])
-    add_row("D. Exempted", outward_data["5D"])
-    add_row("E. Nil Rated", outward_data["5E"])
-    add_row("F. Non-GST Supply", outward_data["5F"])
+    add_row("A. Zero Rated Supply (Export) without payment of tax", outward_data["5A"], section_code="5A")
+    add_row("B. Supplies to SEZs without payment of tax", outward_data["5B"], section_code="5B")
+    add_row("C. Supplies on which tax is to be paid by the recipient on reverse charge basis", outward_data["5C"], section_code="5C")
+    add_row("C1. Supplies on which tax is to be paid by e-commerce operators as per section 9(5)[Supplier to report] ", outward_data["5C1"], section_code="5C1")
+    add_row("D. Exempted", outward_data["5D"], section_code="5D")
+    add_row("E. Nil Rated", outward_data["5E"], section_code="5E")
+    add_row("F. Non-GST Supply", outward_data["5F"], section_code="5F")
 
     # 5G: Sub-Total (A to F)
     tot_5G = sum_dicts([outward_data["5A"], outward_data["5B"], outward_data["5C"], outward_data["5C1"], outward_data["5D"], outward_data["5E"], outward_data["5F"]])
     add_row("G. Sub-Total (A to F above)", tot_5G, is_subtotal=True)
 
-    add_row("H. Credit Notes Issued in respect of transaction in (A to F above (-) )", outward_data["5H"])
-    add_row("I. Debit Notes Issued in respect of transaction in (A to F above (+) )", outward_data["5I"])
-    add_row("J. Supplies declared through Amendments (+)", outward_data["5J"])
-    add_row("K. Supplies declared through Amendments (-)", outward_data["5K"])
+    add_row("H. Credit Notes Issued in respect of transaction in (A to F above (-) )", outward_data["5H"], section_code="5H")
+    add_row("I. Debit Notes Issued in respect of transaction in (A to F above (+) )", outward_data["5I"], section_code="5I")
+    add_row("J. Supplies declared through Amendments (+)", outward_data["5J"], section_code="5J")
+    add_row("K. Supplies declared through Amendments (-)", outward_data["5K"], section_code="5K")
 
     # 5L: Sub-Total (H to K)
     tot_5L = sum_dicts([outward_data["5H"], outward_data["5I"], outward_data["5J"], outward_data["5K"]])
@@ -173,26 +174,26 @@ def get_data(filters):
     # ----------------------------------------------------
     add_row("6. Details of ITC availed", is_header=True)
     add_row("A. Total amount of input tax credit availed through FORM GSTR-3B(Sum total of Table 4A of GST3B) ", inward_data["6A"])
-    add_row("B. Inward supplies received (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)", inward_data["6B"])
+    add_row("B. Inward supplies received (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)", inward_data["6B"], section_code="6B")
     add_row("Input Goods", inward_data["6B_goods"], indent=1)
     add_row("Capital Goods", inward_data["6B_capital"], indent=1)
     add_row("Input Services", inward_data["6B_services"], indent=1)
 
-    add_row("C. Inward supplies received from unregistered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed", inward_data["6C"])
+    add_row("C. Inward supplies received from unregistered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed", inward_data["6C"], section_code="6C")
     add_row("Input Goods", inward_data["6C_goods"], indent=1)
     add_row("Capital Goods", inward_data["6C_capital"], indent=1)
     add_row("Input Services", inward_data["6C_services"], indent=1)
 
-    add_row("D. Inward supplies received from registered persons liable to reverse charge (other than B above) on which tax is paid and ITC availed", inward_data["6D"])
+    add_row("D. Inward supplies received from registered persons liable to reverse charge (other than B above) on which tax is paid and ITC availed", inward_data["6D"], section_code="6D")
     add_row("Input Goods", inward_data["6D_goods"], indent=1)
     add_row("Capital Goods", inward_data["6D_capital"], indent=1)
     add_row("Input Services", inward_data["6D_services"], indent=1)
 
-    add_row("E. Import of goods (including supplies from SEZs)", inward_data["6E"])
+    add_row("E. Import of goods (including supplies from SEZs)", inward_data["6E"], section_code="6E")
     add_row("Input Goods", inward_data["6E_goods"], indent=1)
     add_row("Capital Goods", inward_data["6E_capital"], indent=1)
 
-    add_row("F. Import of services (excluding inward supplies from SEZs)", inward_data["6F"])
+    add_row("F. Import of services (excluding inward supplies from SEZs)", inward_data["6F"], section_code="6F")
     add_row("G. Input Tax Credit received from ISD", inward_data["6G"])
     add_row("H. Amount of ITC reclaimed (other than B Above) under the provisions of the Act", inward_data["6H"])
 
@@ -224,7 +225,7 @@ def get_data(filters):
     add_row("B. As per Rule 39", inward_data["7B"])
     add_row("C. As per Rule 42", inward_data["7C"])
     add_row("D. As per Rule 43", inward_data["7D"])
-    add_row("E. As per Section 17(5)", inward_data["7E"])
+    add_row("E. As per Section 17(5)", inward_data["7E"], section_code="7E")
     add_row("F. Reversal Of TRAN-I credit", inward_data["7F"])
     add_row("G. Reversal Of TRAN-II credit", inward_data["7G"])
     add_row("H. Other reversals", inward_data["7H"])
@@ -282,7 +283,7 @@ def get_data(filters):
     # Table 16: Composition & Deemed
     # ----------------------------------------------------
     add_row("16. Information on supplies received from composition taxpayers, deemed supply under section 143 and goods sent on approval basis ", is_header=True)
-    add_row("A. Supplies received from Composition taxpayers", inward_data["16A"])
+    add_row("A. Supplies received from Composition taxpayers", inward_data["16A"], section_code="16A")
     add_row("B. Deemed supply under section 143", inward_data["16B"])
     add_row("C. Goods sent on approval basis but not returned", inward_data["16C"])
 
@@ -291,8 +292,8 @@ def get_data(filters):
     # ----------------------------------------------------
     # Table 17 & 18: HSN Summaries
     # ----------------------------------------------------
-    add_row("17. HSN-Wise Summary of Outward Supplies", hsn_outward, is_grandtotal=True)
-    add_row("18. HSN-Wise Summary of Inward Supplies", hsn_inward, is_grandtotal=True)
+    add_row("17. HSN-Wise Summary of Outward Supplies", hsn_outward, section_code="17", is_grandtotal=True)
+    add_row("18. HSN-Wise Summary of Inward Supplies", hsn_inward, section_code="18", is_grandtotal=True)
 
     return rows
 

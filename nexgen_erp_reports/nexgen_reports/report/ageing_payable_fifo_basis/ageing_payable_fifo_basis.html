@@ -1,0 +1,38 @@
+<div class="print-format">
+    <div class="text-center" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-weight: bold;">{{ filters.company }}</h3>
+        <h4 style="margin: 5px 0; color: #444;">Ageing Payables (FIFO Basis)</h4>
+        <p style="margin: 0; font-size: 12px; color: #666;">
+            <strong>Account Status as on:</strong> {{ frappe.datetime.str_to_user(filters.report_date) }}
+        </p>
+    </div>
+
+    <table class="table table-bordered table-condensed" style="font-size: 11px;">
+        <thead style="background-color: #336699; color: #fff;">
+            <tr>
+                <th style="width: 28%;">Party Details</th>
+                <th class="text-right" style="width: 12%;">Closing Amt</th>
+                <th class="text-right" style="width: 10%;">( 0 - 30 )</th>
+                <th class="text-right" style="width: 10%;">( 31 - 60 )</th>
+                <th class="text-right" style="width: 10%;">( 61 - 90 )</th>
+                <th class="text-right" style="width: 10%;">( 91 - 120 )</th>
+                <th class="text-right" style="width: 10%;">( 121 - 150 )</th>
+                <th class="text-right" style="width: 10%;">( >= 151 )</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    <td>{{ row.party_name }}</td>
+                    <td class="text-right"><strong>{{ format_currency(row.closing_amt) }}</strong></td>
+                    <td class="text-right">{{ format_currency(row.range1) if row.range1 else '-' }}</td>
+                    <td class="text-right">{{ format_currency(row.range2) if row.range2 else '-' }}</td>
+                    <td class="text-right">{{ format_currency(row.range3) if row.range3 else '-' }}</td>
+                    <td class="text-right">{{ format_currency(row.range4) if row.range4 else '-' }}</td>
+                    <td class="text-right">{{ format_currency(row.range5) if row.range5 else '-' }}</td>
+                    <td class="text-right" style="color: #b91c1c;">{{ format_currency(row.range6) if row.range6 else '-' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
