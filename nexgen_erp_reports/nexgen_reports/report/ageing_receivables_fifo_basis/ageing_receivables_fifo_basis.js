@@ -42,19 +42,36 @@ frappe.query_reports["Ageing Receivables FIFO Basis"] = {
 			window.open(download_url, "_blank");
 		});
 
-		// Clickable Party Name -> Open General Ledger
+		// Click Party Name -> Open General Ledger
 		$(report.page.wrapper).on("click", ".party-gl-drilldown", function(e) {
 			e.preventDefault();
 			const party = $(this).attr("data-party");
 			const filters = report.get_values();
 
-			frappe.set_route("query-report", "General Ledger", {
+			const gl_filters = {
 				company: filters.company,
 				party_type: "Customer",
-				party: [party],
+				party: party,
 				from_date: frappe.datetime.year_start(),
 				to_date: filters.report_date
-			});
+			};
+			frappe.route_options = gl_filters;
+			frappe.set_route("query-report", "General Ledger", gl_filters);
+		});
+
+		// Click Closing Amount -> Open Sales Invoices
+		$(report.page.wrapper).on("click", ".party-invoices-drilldown", function(e) {
+			e.preventDefault();
+			const party = $(this).attr("data-party");
+			const filters = report.get_values();
+
+			const route_params = {
+				company: filters.company,
+				customer: party,
+				docstatus: 1
+			};
+			frappe.route_options = route_params;
+			frappe.set_route("List", "Sales Invoice", route_params);
 		});
 	},
 
@@ -63,7 +80,7 @@ frappe.query_reports["Ageing Receivables FIFO Basis"] = {
 
 		if (!data) return value;
 
-		// Make Party Details clickable link
+		// Make Party Details clickable link to General Ledger
 		if (column.fieldname === "party_name" && data.party) {
 			return `<a href="javascript:void(0);" 
 			           class="party-gl-drilldown" 
@@ -74,14 +91,20 @@ frappe.query_reports["Ageing Receivables FIFO Basis"] = {
 			        </a>`;
 		}
 
+		// Make Closing Amount clickable link to Sales Invoices
+		if (column.fieldname === "closing_amt" && data.party && data.closing_amt > 0) {
+			return `<a href="javascript:void(0);" 
+			           class="party-invoices-drilldown" 
+			           data-party="${data.party}" 
+			           title="Click to view Sales Invoices" 
+			           style="color: #1e3a8a; font-weight: bold; text-decoration: underline; cursor: pointer;">
+			           ${value}
+			        </a>`;
+		}
+
 		// Highlight long pending aging (>= 151 Days)
 		if (column.fieldname === "range6" && data.range6 > 0) {
 			return `<span style="color: #b91c1c; font-weight: 600;">${value}</span>`;
-		}
-
-		// Bold Closing Amount
-		if (column.fieldname === "closing_amt") {
-			return `<strong style="color: #1e3a8a;">${value}</strong>`;
 		}
 
 		return value;

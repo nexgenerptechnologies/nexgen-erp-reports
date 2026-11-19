@@ -43,39 +43,40 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			const sectionCode = $(this).attr("data-section");
 			const filters = report.get_values();
 
-			const filterList = [
-				["Purchase Invoice", "company", "=", filters.company],
-				["Purchase Invoice", "docstatus", "=", 1]
-			];
+			const route_params = {
+				company: filters.company,
+				docstatus: 1
+			};
 
 			if (filters.from_date && filters.to_date) {
-				filterList.push(["Purchase Invoice", "posting_date", "between", [filters.from_date, filters.to_date]]);
+				route_params["posting_date"] = JSON.stringify(["between", [filters.from_date, filters.to_date]]);
 			}
 
 			if (sectionCode === "3_4A") {
-				filterList.push(["Purchase Invoice", "gst_category", "in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
-				filterList.push(["Purchase Invoice", "is_return", "=", 0]);
+				route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+				route_params["is_return"] = 0;
 			} else if (sectionCode === "4B") {
-				filterList.push(["Purchase Invoice", "gst_category", "=", "Unregistered"]);
-				filterList.push(["Purchase Invoice", "is_return", "=", 0]);
+				route_params["gst_category"] = "Unregistered";
+				route_params["is_return"] = 0;
 			} else if (sectionCode === "6C") {
-				filterList.push(["Purchase Invoice", "gst_category", "in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
-				filterList.push(["Purchase Invoice", "is_return", "=", 1]);
+				route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+				route_params["is_return"] = 1;
 			} else if (sectionCode === "6C_UR") {
-				filterList.push(["Purchase Invoice", "gst_category", "=", "Unregistered"]);
-				filterList.push(["Purchase Invoice", "is_return", "=", 1]);
-			} else if (sectionCode === "5A_5B") {
-				filterList.push(["Purchase Invoice", "gst_category", "=", "Overseas"]);
-			} else if (sectionCode === "4C") {
-				filterList.push(["Purchase Invoice", "gst_category", "=", "Overseas"]);
+				route_params["gst_category"] = "Unregistered";
+				route_params["is_return"] = 1;
+			} else if (sectionCode === "5A_5B" || sectionCode === "4C") {
+				route_params["gst_category"] = "Overseas";
+				route_params["is_return"] = 0;
+			} else if (sectionCode === "7A_7B") {
+				route_params["is_return"] = 0;
 			} else if (sectionCode === "ITC_REV") {
-				filterList.push(["Purchase Invoice", "eligibility_for_itc", "like", "%Ineligible%"]);
+				route_params["eligibility_for_itc"] = JSON.stringify(["like", "%Ineligible%"]);
+			} else if (sectionCode === "HSN_13") {
+				route_params["is_return"] = 0;
 			}
 
-			frappe.route_options = null;
-			frappe.set_route("List", "Purchase Invoice", {
-				filters: JSON.stringify(filterList)
-			});
+			frappe.route_options = route_params;
+			frappe.set_route("List", "Purchase Invoice", route_params);
 		});
 	},
 
@@ -99,8 +100,8 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			return `<a href="javascript:void(0);" 
 			           class="gstr-section-drilldown" 
 			           data-section="${data.section_code}" 
-			           title="Click to view invoices in List View"
-			           style="color: #1a56db; font-weight: 600; text-decoration: underline;">
+			           title="Click to view invoices in List View" 
+			           style="color: #1a56db; font-weight: 600; text-decoration: underline; cursor: pointer;">
 			           ${value}
 			        </a>`;
 		}
