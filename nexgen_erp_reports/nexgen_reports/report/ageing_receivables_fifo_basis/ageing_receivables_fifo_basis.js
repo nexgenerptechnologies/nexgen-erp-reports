@@ -1,4 +1,4 @@
-frappe.query_reports["Ageing Receivables (FIFO Basis)"] = {
+frappe.query_reports["Ageing Receivables FIFO Basis"] = {
 	filters: [
 		{
 			fieldname: "company",
