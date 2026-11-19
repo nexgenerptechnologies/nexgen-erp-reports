@@ -45,9 +45,12 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 
 			const listFilters = {
 				company: filters.company,
-				posting_date: ["between", [filters.from_date, filters.to_date]],
 				docstatus: 1
 			};
+
+			if (filters.from_date && filters.to_date) {
+				listFilters["posting_date"] = ["between", [filters.from_date, filters.to_date]];
+			}
 
 			if (sectionCode === "3_4A") {
 				listFilters["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
@@ -69,7 +72,9 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 				listFilters["eligibility_for_itc"] = ["like", "%Ineligible%"];
 			}
 
-			frappe.set_route("List", "Purchase Invoice", listFilters);
+			// Use in-memory route_options to prevent URL stringification of date range
+			frappe.route_options = listFilters;
+			frappe.set_route("List", "Purchase Invoice");
 		});
 	},
 
