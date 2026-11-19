@@ -131,8 +131,11 @@ def get_data(filters):
             bucket["igst_amount"] += flt(inv.get("igst", 0.0))
             bucket["cess_amount"] += flt(inv.get("cess", 0.0))
 
-            # ITC calculation based on eligibility
-            is_ineligible = (inv.get("eligibility_for_itc") or "").lower() in ["ineligible", "ineligible as per section 17(5)"]
+            # Dynamic ITC handling compatible with v15, v16 & India Compliance
+            is_ineligible = (inv.get("eligibility_for_itc") or "").lower() in [
+                "ineligible", "ineligible as per section 17(5)", "no", "none"
+            ]
+
             if not is_ineligible and sec != "ITC_REV":
                 bucket["cgst_itc"] += flt(inv.get("cgst", 0.0))
                 bucket["sgst_itc"] += flt(inv.get("sgst", 0.0))
@@ -219,7 +222,6 @@ def classify_invoice(inv):
         return "ITC_REV"
 
     if gst_category == "Overseas":
-        # Check if service import or goods import
         if inv.get("is_service_import"):
             return "4C"
         return "5A_5B"
@@ -251,6 +253,19 @@ def get_conditions(filters):
 
 
 def get_invoices_with_taxes(conditions, filters):
+    # Dynamic field detection for v15 / v16 & India Compliance compatibility
+    has_gst_category = frappe.db.has_column("Purchase Invoice", "gst_category")
+    has_supplier_gstin = frappe.db.has_column("Purchase Invoice", "supplier_gstin")
+    has_eligibility = frappe.db.has_column("Purchase Invoice", "eligibility_for_itc")
+
+    gst_cat_expr = "pi.gst_category" if has_gst_category else "'' as gst_category"
+    supplier_gstin_expr = "pi.supplier_gstin" if has_supplier_gstin else "'' as supplier_gstin"
+    eligibility_expr = "pi.eligibility_for_itc" if has_eligibility else "'' as eligibility_for_itc"
+
+    # In Purchase Taxes and Charges: detect base_tax_amount_after_discount_amount vs tax_amount
+    has_base_tax = frappe.db.has_column("Purchase Taxes and Charges", "base_tax_amount_after_discount_amount")
+    tax_col = "base_tax_amount_after_discount_amount" if has_base_tax else "tax_amount"
+
     query = f"""
         SELECT
             pi.name,
@@ -259,10 +274,10 @@ def get_invoices_with_taxes(conditions, filters):
             pi.bill_date,
             pi.supplier,
             pi.supplier_name,
-            pi.supplier_gstin,
-            pi.gst_category,
+            {supplier_gstin_expr},
+            {gst_cat_expr},
             pi.is_return,
-            pi.eligibility_for_itc,
+            {eligibility_expr},
             pi.base_net_total,
             pi.base_grand_total,
             COALESCE(taxes.cgst, 0) as cgst,
@@ -274,10 +289,10 @@ def get_invoices_with_taxes(conditions, filters):
         LEFT JOIN (
             SELECT
                 parent,
-                SUM(CASE WHEN account_head LIKE '%%cgst%%' OR account_head LIKE '%%central tax%%' THEN base_tax_amount_after_discount_amount ELSE 0 END) as cgst,
-                SUM(CASE WHEN account_head LIKE '%%sgst%%' OR account_head LIKE '%%state tax%%' OR account_head LIKE '%%utgst%%' THEN base_tax_amount_after_discount_amount ELSE 0 END) as sgst,
-                SUM(CASE WHEN account_head LIKE '%%igst%%' OR account_head LIKE '%%integrated tax%%' THEN base_tax_amount_after_discount_amount ELSE 0 END) as igst,
-                SUM(CASE WHEN account_head LIKE '%%cess%%' THEN base_tax_amount_after_discount_amount ELSE 0 END) as cess
+                SUM(CASE WHEN LOWER(account_head) LIKE '%%cgst%%' OR LOWER(account_head) LIKE '%%central tax%%' OR LOWER(account_head) LIKE '%%central gst%%' THEN {tax_col} ELSE 0 END) as cgst,
+                SUM(CASE WHEN LOWER(account_head) LIKE '%%sgst%%' OR LOWER(account_head) LIKE '%%state tax%%' OR LOWER(account_head) LIKE '%%state gst%%' OR LOWER(account_head) LIKE '%%utgst%%' THEN {tax_col} ELSE 0 END) as sgst,
+                SUM(CASE WHEN LOWER(account_head) LIKE '%%igst%%' OR LOWER(account_head) LIKE '%%integrated tax%%' OR LOWER(account_head) LIKE '%%integrated gst%%' THEN {tax_col} ELSE 0 END) as igst,
+                SUM(CASE WHEN LOWER(account_head) LIKE '%%cess%%' THEN {tax_col} ELSE 0 END) as cess
             FROM `tabPurchase Taxes and Charges`
             GROUP BY parent
         ) taxes ON taxes.parent = pi.name
@@ -287,11 +302,21 @@ def get_invoices_with_taxes(conditions, filters):
 
 
 def get_hsn_summary_count(conditions, filters):
+    # Dynamic column check for HSN/SAC
+    hsn_col = None
+    if frappe.db.has_column("Purchase Invoice Item", "gst_hsn_code"):
+        hsn_col = "gst_hsn_code"
+    elif frappe.db.has_column("Purchase Invoice Item", "hsn_sac"):
+        hsn_col = "hsn_sac"
+
+    if not hsn_col:
+        return 0
+
     query = f"""
-        SELECT COUNT(DISTINCT pii.gst_hsn_code)
+        SELECT COUNT(DISTINCT pii.{hsn_col})
         FROM `tabPurchase Invoice Item` pii
         JOIN `tabPurchase Invoice` pi ON pi.name = pii.parent
-        WHERE {conditions} AND COALESCE(pii.gst_hsn_code, '') != ''
+        WHERE {conditions} AND COALESCE(pii.{hsn_col}, '') != ''
     """
     res = frappe.db.sql(query, filters)
     return res[0][0] if res else 0
@@ -324,14 +349,23 @@ def download_custom_excel(filters=None):
     company_doc = frappe.get_doc("Company", company) if company else None
     company_name = company_doc.name if company_doc else "NexGen Enterprises"
 
-    # Fetch registered address
+    # Fetch registered address dynamically
     address_lines = []
     if company:
-        address_name = frappe.db.get_value(
-            "Dynamic Link",
-            {"link_doctype": "Company", "link_name": company, "parenttype": "Address"},
-            "parent"
-        )
+        address_name = None
+        try:
+            from frappe.contacts.doctype.address.address import get_default_address
+            address_name = get_default_address("Company", company)
+        except Exception:
+            pass
+
+        if not address_name:
+            address_name = frappe.db.get_value(
+                "Dynamic Link",
+                {"link_doctype": "Company", "link_name": company, "parenttype": "Address"},
+                "parent"
+            )
+
         if address_name:
             addr = frappe.get_doc("Address", address_name)
             if addr.address_line1:

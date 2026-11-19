@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include nexgen_erp_reports *.css
+recursive-include nexgen_erp_reports *.csv
+recursive-include nexgen_erp_reports *.html
+recursive-include nexgen_erp_reports *.ico
+recursive-include nexgen_erp_reports *.js
+recursive-include nexgen_erp_reports *.json
+recursive-include nexgen_erp_reports *.md
+recursive-include nexgen_erp_reports *.png
+recursive-include nexgen_erp_reports *.py
+recursive-include nexgen_erp_reports *.svg
+recursive-include nexgen_erp_reports *.txt
+recursive-exclude nexgen_erp_reports *.pyc
