@@ -231,8 +231,12 @@ def classify_invoice(inv):
             return "6C"
         return "6C_UR"
 
+    # Purchases from Unregistered suppliers are B2BUR (Table 4B)
+    if gst_category == "Unregistered" or not is_registered:
+        return "4B"
+
     total_tax = flt(inv.get("cgst", 0)) + flt(inv.get("sgst", 0)) + flt(inv.get("igst", 0)) + flt(inv.get("cess", 0))
-    if flt(inv.get("base_net_total", 0)) > 0 and total_tax == 0 and gst_category != "Overseas":
+    if flt(inv.get("base_net_total", 0)) > 0 and total_tax == 0:
         return "7A_7B"
 
     if is_registered:

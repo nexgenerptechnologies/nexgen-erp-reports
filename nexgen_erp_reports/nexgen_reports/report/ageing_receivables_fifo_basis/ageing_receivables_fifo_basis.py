@@ -21,8 +21,7 @@ def get_columns():
         {
             "label": _("Party Details"),
             "fieldname": "party_name",
-            "fieldtype": "Link",
-            "options": "Customer",
+            "fieldtype": "Data",
             "width": 300
         },
         {

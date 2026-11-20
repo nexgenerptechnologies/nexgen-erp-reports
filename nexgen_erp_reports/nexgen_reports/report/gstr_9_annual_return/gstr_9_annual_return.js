@@ -12,7 +12,14 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.year_start(),
+			default: (function() {
+				let today = frappe.datetime.get_today();
+				let parts = today.split("-");
+				let year = parseInt(parts[0], 10);
+				let month = parseInt(parts[1], 10);
+				let fy_year = month >= 4 ? year : year - 1;
+				return fy_year + "-04-01";
+			})(),
 			reqd: 1
 		},
 		{
@@ -54,31 +61,40 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 				};
 
 				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = JSON.stringify(["between", [filters.from_date, filters.to_date]]);
+					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
 				}
 
 				if (sectionCode === "4A") {
 					route_params["gst_category"] = "Unregistered";
 					route_params["is_return"] = 0;
 				} else if (sectionCode === "4B") {
-					route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
 					route_params["is_return"] = 0;
 				} else if (sectionCode === "4C" || sectionCode === "5A") {
 					route_params["gst_category"] = "Overseas";
+					route_params["is_return"] = 0;
 				} else if (sectionCode === "4D" || sectionCode === "5B") {
 					route_params["gst_category"] = "SEZ";
+					route_params["is_return"] = 0;
 				} else if (sectionCode === "4E") {
 					route_params["gst_category"] = "Deemed Export";
+					route_params["is_return"] = 0;
 				} else if (sectionCode === "4I" || sectionCode === "5H") {
 					route_params["is_return"] = 1;
 				} else if (sectionCode === "5D") {
 					route_params["gst_category"] = "Exempt";
+					route_params["is_return"] = 0;
 				} else if (sectionCode === "5E") {
 					route_params["gst_category"] = "Nil Rated";
+					route_params["is_return"] = 0;
+				}
+
+				if (window.history && window.history.replaceState) {
+					window.history.replaceState({}, document.title, window.location.pathname);
 				}
 
 				frappe.route_options = route_params;
-				frappe.set_route("List", "Sales Invoice", route_params);
+				frappe.set_route("List", "Sales Invoice");
 			} else if (purchaseSections.includes(sectionCode)) {
 				const route_params = {
 					company: filters.company,
@@ -86,11 +102,11 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 				};
 
 				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = JSON.stringify(["between", [filters.from_date, filters.to_date]]);
+					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
 				}
 
 				if (sectionCode === "6B") {
-					route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
 					route_params["is_return"] = 0;
 				} else if (sectionCode === "6C") {
 					route_params["gst_category"] = "Unregistered";
@@ -100,13 +116,17 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 				} else if (sectionCode === "6E" || sectionCode === "6F") {
 					route_params["gst_category"] = "Overseas";
 				} else if (sectionCode === "7E") {
-					route_params["eligibility_for_itc"] = JSON.stringify(["like", "%Ineligible%"]);
+					route_params["eligibility_for_itc"] = ["like", "%Ineligible%"];
 				} else if (sectionCode === "16A") {
 					route_params["gst_category"] = "Composition";
 				}
 
+				if (window.history && window.history.replaceState) {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				}
+
 				frappe.route_options = route_params;
-				frappe.set_route("List", "Purchase Invoice", route_params);
+				frappe.set_route("List", "Purchase Invoice");
 			}
 		});
 	},

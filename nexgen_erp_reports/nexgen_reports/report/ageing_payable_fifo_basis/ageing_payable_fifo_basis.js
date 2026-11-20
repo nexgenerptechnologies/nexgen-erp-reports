@@ -55,11 +55,14 @@ frappe.query_reports["Ageing Payable FIFO Basis"] = {
 				from_date: frappe.datetime.year_start(),
 				to_date: filters.report_date
 			};
+			if (window.history && window.history.replaceState) {
+				window.history.replaceState({}, document.title, window.location.pathname);
+			}
 			frappe.route_options = gl_filters;
-			frappe.set_route("query-report", "General Ledger", gl_filters);
+			frappe.set_route("query-report", "General Ledger");
 		});
 
-		// Click Closing Amount -> Open Purchase Invoices
+		// Click Closing Amount or Slab -> Open Purchase Invoices
 		$(report.page.wrapper).on("click", ".party-invoices-drilldown", function(e) {
 			e.preventDefault();
 			const party = $(this).attr("data-party");
@@ -70,8 +73,11 @@ frappe.query_reports["Ageing Payable FIFO Basis"] = {
 				supplier: party,
 				docstatus: 1
 			};
+			if (window.history && window.history.replaceState) {
+				window.history.replaceState({}, document.title, window.location.pathname);
+			}
 			frappe.route_options = route_params;
-			frappe.set_route("List", "Purchase Invoice", route_params);
+			frappe.set_route("List", "Purchase Invoice");
 		});
 	},
 
@@ -87,7 +93,7 @@ frappe.query_reports["Ageing Payable FIFO Basis"] = {
 			           data-party="${data.party}" 
 			           title="Click to view Supplier Ledger in General Ledger" 
 			           style="color: #1a56db; font-weight: 600; text-decoration: underline; cursor: pointer;">
-			           ${value}
+			           ${data.party_name || data.party}
 			        </a>`;
 		}
 
@@ -102,9 +108,16 @@ frappe.query_reports["Ageing Payable FIFO Basis"] = {
 			        </a>`;
 		}
 
-		// Highlight long pending aging (>= 151 Days)
-		if (column.fieldname === "range6" && data.range6 > 0) {
-			return `<span style="color: #b91c1c; font-weight: 600;">${value}</span>`;
+		// Make aging slabs clickable as well
+		if (column.fieldname && column.fieldname.startsWith("range") && data.party && data[column.fieldname] > 0) {
+			const color = column.fieldname === "range6" ? "#b91c1c" : "#2563eb";
+			return `<a href="javascript:void(0);" 
+			           class="party-invoices-drilldown" 
+			           data-party="${data.party}" 
+			           title="Click to view Purchase Invoices" 
+			           style="color: ${color}; text-decoration: underline; cursor: pointer; font-weight: 500;">
+			           ${value}
+			        </a>`;
 		}
 
 		return value;

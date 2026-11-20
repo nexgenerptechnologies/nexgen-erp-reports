@@ -12,7 +12,14 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+			default: (function() {
+				let today = frappe.datetime.get_today();
+				let parts = today.split("-");
+				let year = parseInt(parts[0], 10);
+				let month = parseInt(parts[1], 10);
+				let fy_year = month >= 4 ? year : year - 1;
+				return fy_year + "-04-01";
+			})(),
 			reqd: 1
 		},
 		{
@@ -49,17 +56,17 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			};
 
 			if (filters.from_date && filters.to_date) {
-				route_params["posting_date"] = JSON.stringify(["between", [filters.from_date, filters.to_date]]);
+				route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
 			}
 
 			if (sectionCode === "3_4A") {
-				route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
 				route_params["is_return"] = 0;
 			} else if (sectionCode === "4B") {
 				route_params["gst_category"] = "Unregistered";
 				route_params["is_return"] = 0;
 			} else if (sectionCode === "6C") {
-				route_params["gst_category"] = JSON.stringify(["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]]);
+				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
 				route_params["is_return"] = 1;
 			} else if (sectionCode === "6C_UR") {
 				route_params["gst_category"] = "Unregistered";
@@ -70,13 +77,17 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			} else if (sectionCode === "7A_7B") {
 				route_params["is_return"] = 0;
 			} else if (sectionCode === "ITC_REV") {
-				route_params["eligibility_for_itc"] = JSON.stringify(["like", "%Ineligible%"]);
+				route_params["eligibility_for_itc"] = ["like", "%Ineligible%"];
 			} else if (sectionCode === "HSN_13") {
 				route_params["is_return"] = 0;
 			}
 
+			if (window.history && window.history.replaceState) {
+				window.history.replaceState({}, document.title, window.location.pathname);
+			}
+
 			frappe.route_options = route_params;
-			frappe.set_route("List", "Purchase Invoice", route_params);
+			frappe.set_route("List", "Purchase Invoice");
 		});
 	},
 
