@@ -267,6 +267,24 @@ def get_data(filters):
     final_balance = abs(running_balance)
     final_balance_type = "Dr" if running_balance >= 0 else "Cr"
 
+    # Add Total / Closing Balance row
+    if data:
+        data.append({
+            "posting_date": None,
+            "voucher_type": "",
+            "voucher_no": "",
+            "party_type": "",
+            "party": "",
+            "bill_no": "",
+            "against_account": _("Total Movement / Closing Balance"),
+            "debit": totals["debit"],
+            "credit": totals["credit"],
+            "balance": final_balance,
+            "balance_type": final_balance_type,
+            "remarks": "",
+            "is_total_row": 1
+        })
+
     return data, totals, final_balance, final_balance_type
 
 

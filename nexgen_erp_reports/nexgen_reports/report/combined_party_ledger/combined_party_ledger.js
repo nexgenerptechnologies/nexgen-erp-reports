@@ -135,6 +135,14 @@ frappe.query_reports["Combined Party Ledger"] = {
 
 		if (!data) return value;
 
+		// Total / Closing Balance row highlight
+		if (data.is_total_row) {
+			if (column.fieldname === "against_account") {
+				return `<strong style="color: #1e3a8a; font-size: 13px;">${value}</strong>`;
+			}
+			return `<strong style="color: #1e3a8a;">${value}</strong>`;
+		}
+
 		// Opening Balance row highlight
 		if (data.is_opening) {
 			if (column.fieldname === "against_account") {
