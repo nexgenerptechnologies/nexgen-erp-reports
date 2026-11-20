@@ -112,31 +112,49 @@ class ExpenseInvoice(Document):
 
             pi.append("items", item_data)
 
-        # Tax rows
+        # Set Purchase Taxes and Charges Template if available
+        abbr = frappe.db.get_value("Company", self.company, "abbr")
+        if self.tax_type == "In-State (CGST + SGST)":
+            template = f"Input GST In-state - {abbr}"
+        elif self.tax_type == "Out-of-State (IGST)":
+            template = f"Input GST Out-state - {abbr}"
+        else:
+            template = None
+
+        if template and frappe.db.exists("Purchase Taxes and Charges Template", template):
+            pi.taxes_and_charges = template
+
+        # Tax rows (strictly non-RCM Input tax accounts)
         cgst_acc = get_tax_account(self.company, "CGST")
         sgst_acc = get_tax_account(self.company, "SGST")
         igst_acc = get_tax_account(self.company, "IGST")
+
+        half_rate = flt(self.gst_rate) / 2.0
+        full_rate = flt(self.gst_rate)
 
         if self.cgst_amount > 0 and cgst_acc:
             pi.append("taxes", {
                 "charge_type": "Actual",
                 "account_head": cgst_acc,
+                "rate": half_rate,
                 "tax_amount": self.cgst_amount,
-                "description": f"Input Tax CGST ({self.gst_rate / 2}%)"
+                "description": f"Input Tax CGST ({half_rate}%)"
             })
         if self.sgst_amount > 0 and sgst_acc:
             pi.append("taxes", {
                 "charge_type": "Actual",
                 "account_head": sgst_acc,
+                "rate": half_rate,
                 "tax_amount": self.sgst_amount,
-                "description": f"Input Tax SGST ({self.gst_rate / 2}%)"
+                "description": f"Input Tax SGST ({half_rate}%)"
             })
         if self.igst_amount > 0 and igst_acc:
             pi.append("taxes", {
                 "charge_type": "Actual",
                 "account_head": igst_acc,
+                "rate": full_rate,
                 "tax_amount": self.igst_amount,
-                "description": f"Input Tax IGST ({self.gst_rate}%)"
+                "description": f"Input Tax IGST ({full_rate}%)"
             })
 
         # TDS
@@ -153,33 +171,40 @@ class ExpenseInvoice(Document):
 
 
 def get_tax_account(company, tax_type):
-    """Finds Input Tax account for CGST, SGST, or IGST in Company"""
-    # 1. Exact match e.g. "Input Tax CGST - NE"
-    acc = frappe.db.get_value("Account", {
-        "company": company,
-        "account_name": ["like", f"%Input Tax {tax_type}%"],
-        "is_group": 0
-    }, "name")
-    if acc:
-        return acc
+    """Finds normal (non-RCM) Input Tax account for CGST, SGST, or IGST in Company"""
+    # Exclude RCM, Refund, and Output accounts to avoid Reverse Charge validation errors
+    accounts = frappe.db.sql("""
+        SELECT name
+        FROM `tabAccount`
+        WHERE company = %s
+          AND is_group = 0
+          AND account_name LIKE %s
+          AND account_name NOT LIKE '%%RCM%%'
+          AND account_name NOT LIKE '%%Refund%%'
+          AND account_name NOT LIKE '%%Output%%'
+        ORDER BY LENGTH(account_name) ASC, name ASC
+    """, (company, f"%Input%{tax_type}%"), as_dict=True)
 
-    # 2. General Input match
-    acc = frappe.db.get_value("Account", {
-        "company": company,
-        "account_name": ["like", f"%Input%{tax_type}%"],
-        "is_group": 0
-    }, "name")
-    if acc:
-        return acc
+    if accounts:
+        return accounts[0].name
 
-    # 3. Any Tax account with that tax_type
-    acc = frappe.db.get_value("Account", {
-        "company": company,
-        "account_name": ["like", f"%{tax_type}%"],
-        "account_type": "Tax",
-        "is_group": 0
-    }, "name")
-    return acc
+    fallback = frappe.db.sql("""
+        SELECT name
+        FROM `tabAccount`
+        WHERE company = %s
+          AND is_group = 0
+          AND account_type = 'Tax'
+          AND account_name LIKE %s
+          AND account_name NOT LIKE '%%RCM%%'
+          AND account_name NOT LIKE '%%Refund%%'
+          AND account_name NOT LIKE '%%Output%%'
+        ORDER BY LENGTH(account_name) ASC, name ASC
+    """, (company, f"%{tax_type}%"), as_dict=True)
+
+    if fallback:
+        return fallback[0].name
+
+    return None
 
 
 @frappe.whitelist()
