@@ -74,6 +74,17 @@ frappe.query_reports["Combined Party Ledger"] = {
 	],
 
 	onload: function(report) {
+		// Disable built-in Datatable bottom total row (running balances must not be summed)
+		if (report.raw_data) {
+			report.raw_data.add_total_row = 0;
+		}
+		frappe.dom.set_style(`
+			.query-report[data-report-name="Combined Party Ledger"] .dt-footer,
+			.query-report[data-report-name="Combined Party Ledger"] .dt-row-total {
+				display: none !important;
+			}
+		`);
+
 		// 1. Download Excel Action
 		report.page.add_inner_button(__("Download Combined Ledger Excel"), function() {
 			const filters = report.get_values();
@@ -127,6 +138,12 @@ frappe.query_reports["Combined Party Ledger"] = {
 					show_contra_dialog(report, filters, res);
 				}
 			});
+		});
+	},
+
+	get_datatable_options: function(options) {
+		return Object.assign(options, {
+			showTotalRow: false
 		});
 	},
 
