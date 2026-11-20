@@ -1,0 +1,47 @@
+<div class="print-format">
+    <div class="text-center" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-weight: bold; color: #1e3a8a;">{{ filters.company }}</h3>
+        <h4 style="margin: 5px 0; color: #374151;">Combined Party Ledger (Receivable & Payable)</h4>
+        <p style="margin: 0; font-size: 12px; color: #64748b;">
+            {% if filters.customer and filters.supplier %}
+                <strong>Customer:</strong> {{ filters.customer }} &nbsp;|&nbsp; <strong>Supplier:</strong> {{ filters.supplier }}<br/>
+            {% elif filters.customer %}
+                <strong>Customer:</strong> {{ filters.customer }}<br/>
+            {% elif filters.supplier %}
+                <strong>Supplier:</strong> {{ filters.supplier }}<br/>
+            {% endif %}
+            <strong>Period:</strong> {{ frappe.datetime.str_to_user(filters.from_date) }} to {{ frappe.datetime.str_to_user(filters.to_date) }}
+        </p>
+    </div>
+
+    <table class="table table-bordered table-condensed" style="font-size: 11px;">
+        <thead style="background-color: #1e3a8a; color: #fff;">
+            <tr>
+                <th style="width: 10%;">Date</th>
+                <th style="width: 12%;">Type</th>
+                <th style="width: 15%;">Voucher No</th>
+                <th style="width: 10%;">Party</th>
+                <th style="width: 10%;">Ref/Bill</th>
+                <th class="text-right" style="width: 12%;">Debit (₹)</th>
+                <th class="text-right" style="width: 12%;">Credit (₹)</th>
+                <th class="text-right" style="width: 13%;">Net Balance (₹)</th>
+                <th class="text-center" style="width: 6%;">Dr/Cr</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr {% if row.is_opening %}style="background-color: #f1f5f9; font-weight: bold;"{% endif %}>
+                    <td>{{ frappe.datetime.str_to_user(row.posting_date) if row.posting_date else '' }}</td>
+                    <td>{{ row.voucher_type or (row.against_account if row.is_opening else '') }}</td>
+                    <td>{{ row.voucher_no or '' }}</td>
+                    <td>{{ row.party or '' }}</td>
+                    <td>{{ row.bill_no or '' }}</td>
+                    <td class="text-right" style="color: #047857;">{{ format_currency(row.debit) if row.debit else '-' }}</td>
+                    <td class="text-right" style="color: #b91c1c;">{{ format_currency(row.credit) if row.credit else '-' }}</td>
+                    <td class="text-right" style="font-weight: bold;">{{ format_currency(row.balance) }}</td>
+                    <td class="text-center">{{ row.balance_type or '' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -1,1 +1,2 @@
 nexgen_erp_reports.patches.v0_0_2.rename_ageing_report
+nexgen_erp_reports.patches.v0_0_3.add_combined_party_ledger
