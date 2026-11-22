@@ -50,14 +50,24 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 			const sectionCode = $(this).attr("data-section");
 			const filters = report.get_values();
 
+			// For HSN Summary (Table 13), navigate directly to Item-wise Purchase Register
+			if (sectionCode === "HSN_13") {
+				if (window.history && window.history.replaceState) {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				}
+				frappe.route_options = {
+					company: filters.company,
+					from_date: filters.from_date,
+					to_date: filters.to_date
+				};
+				frappe.set_route("query-report", "Item-wise Purchase Register");
+				return;
+			}
+
 			const route_params = {
 				company: filters.company,
 				docstatus: 1
 			};
-
-			if (filters.from_date && filters.to_date) {
-				route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-			}
 
 			if (sectionCode === "3_4A") {
 				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
@@ -78,8 +88,6 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 				route_params["is_return"] = 0;
 			} else if (sectionCode === "ITC_REV") {
 				route_params["eligibility_for_itc"] = ["like", "%Ineligible%"];
-			} else if (sectionCode === "HSN_13") {
-				route_params["is_return"] = 0;
 			}
 
 			if (window.history && window.history.replaceState) {
@@ -108,10 +116,14 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 
 		// Make Section Name clickable with drill-down link
 		if (column.fieldname === "section_name" && data.section_code) {
+			let linkTitle = data.section_code === "HSN_13"
+				? "Click to view Item-wise Purchase Register (HSN Breakdown)"
+				: "Click to view invoices in List View";
+
 			return `<a href="javascript:void(0);" 
 			           class="gstr-section-drilldown" 
 			           data-section="${data.section_code}" 
-			           title="Click to view invoices in List View" 
+			           title="${linkTitle}" 
 			           style="color: #1a56db; font-weight: 600; text-decoration: underline; cursor: pointer;">
 			           ${value}
 			        </a>`;
@@ -119,9 +131,14 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 
 		// Make record count clickable as well
 		if (column.fieldname === "record_count" && data.section_code && parseInt(data.record_count) > 0) {
+			let badgeTitle = data.section_code === "HSN_13"
+				? "Distinct HSN/SAC code count - Click to view Item-wise Purchase Register"
+				: "Click to view invoices in List View";
+
 			return `<a href="javascript:void(0);" 
 			           class="gstr-section-drilldown badge badge-primary" 
 			           data-section="${data.section_code}" 
+			           title="${badgeTitle}"
 			           style="cursor: pointer; padding: 4px 8px; font-size: 12px;">
 			           ${value}
 			        </a>`;

@@ -50,19 +50,43 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 			const sectionCode = $(this).attr("data-section");
 			const filters = report.get_values();
 
+			// Table 17: HSN Outward Supplies -> Item-wise Sales Register
+			if (sectionCode === "17") {
+				if (window.history && window.history.replaceState) {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				}
+				frappe.route_options = {
+					company: filters.company,
+					from_date: filters.from_date,
+					to_date: filters.to_date
+				};
+				frappe.set_route("query-report", "Item-wise Sales Register");
+				return;
+			}
+
+			// Table 18: HSN Inward Supplies -> Item-wise Purchase Register
+			if (sectionCode === "18") {
+				if (window.history && window.history.replaceState) {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				}
+				frappe.route_options = {
+					company: filters.company,
+					from_date: filters.from_date,
+					to_date: filters.to_date
+				};
+				frappe.set_route("query-report", "Item-wise Purchase Register");
+				return;
+			}
+
 			// Outward Sections -> Sales Invoice
-			const salesSections = ["4A", "4B", "4C", "4D", "4E", "4I", "4J", "5A", "5B", "5C", "5D", "5E", "5F", "5H", "17"];
-			const purchaseSections = ["6B", "6C", "6D", "6E", "6F", "7E", "16A", "18"];
+			const salesSections = ["4A", "4B", "4C", "4D", "4E", "4I", "4J", "5A", "5B", "5C", "5D", "5E", "5F", "5H"];
+			const purchaseSections = ["6B", "6C", "6D", "6E", "6F", "7E", "16A"];
 
 			if (salesSections.includes(sectionCode)) {
 				const route_params = {
 					company: filters.company,
 					docstatus: 1
 				};
-
-				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-				}
 
 				if (sectionCode === "4A") {
 					route_params["gst_category"] = "Unregistered";
@@ -100,10 +124,6 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 					company: filters.company,
 					docstatus: 1
 				};
-
-				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-				}
 
 				if (sectionCode === "6B") {
 					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];

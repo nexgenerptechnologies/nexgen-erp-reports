@@ -147,16 +147,21 @@ def get_data(filters):
                 bucket["igst_itc"] += flt(inv.get("igst", 0.0))
                 bucket["cess_itc"] += flt(inv.get("cess", 0.0))
 
-    # HSN summary item count
-    hsn_count = get_hsn_summary_count(conditions, filters)
-    section_buckets["HSN_13"]["record_count"] = hsn_count
+    # HSN summary item count and totals
+    hsn_totals = get_hsn_summary_totals(conditions, filters)
+    section_buckets["HSN_13"]["record_count"] = hsn_totals["hsn_count"]
+    section_buckets["HSN_13"]["taxable_amount"] = hsn_totals["taxable_amount"]
+    section_buckets["HSN_13"]["cgst_amount"] = hsn_totals["cgst"]
+    section_buckets["HSN_13"]["sgst_amount"] = hsn_totals["sgst"]
+    section_buckets["HSN_13"]["igst_amount"] = hsn_totals["igst"]
+    section_buckets["HSN_13"]["cess_amount"] = hsn_totals["cess"]
 
-    # Calculate overall ITC totals
+    # Calculate overall ITC totals (exclude ITC_REV and HSN_13)
     itc_totals = {
-        "cgst": sum(b["cgst_itc"] for k, b in section_buckets.items() if k != "ITC_REV") - section_buckets["ITC_REV"]["cgst_itc"],
-        "sgst": sum(b["sgst_itc"] for k, b in section_buckets.items() if k != "ITC_REV") - section_buckets["ITC_REV"]["sgst_itc"],
-        "igst": sum(b["igst_itc"] for k, b in section_buckets.items() if k != "ITC_REV") - section_buckets["ITC_REV"]["igst_itc"],
-        "cess": sum(b["cess_itc"] for k, b in section_buckets.items() if k != "ITC_REV") - section_buckets["ITC_REV"]["cess_itc"],
+        "cgst": sum(b["cgst_itc"] for k, b in section_buckets.items() if k not in ["ITC_REV", "HSN_13"]) - section_buckets["ITC_REV"]["cgst_itc"],
+        "sgst": sum(b["sgst_itc"] for k, b in section_buckets.items() if k not in ["ITC_REV", "HSN_13"]) - section_buckets["ITC_REV"]["sgst_itc"],
+        "igst": sum(b["igst_itc"] for k, b in section_buckets.items() if k not in ["ITC_REV", "HSN_13"]) - section_buckets["ITC_REV"]["igst_itc"],
+        "cess": sum(b["cess_itc"] for k, b in section_buckets.items() if k not in ["ITC_REV", "HSN_13"]) - section_buckets["ITC_REV"]["cess_itc"],
     }
     itc_totals["total"] = itc_totals["cgst"] + itc_totals["sgst"] + itc_totals["igst"] + itc_totals["cess"]
 
@@ -305,7 +310,7 @@ def get_invoices_with_taxes(conditions, filters):
     return frappe.db.sql(query, filters, as_dict=True)
 
 
-def get_hsn_summary_count(conditions, filters):
+def get_hsn_summary_totals(conditions, filters):
     # Dynamic column check for HSN/SAC
     hsn_col = None
     if frappe.db.has_column("Purchase Invoice Item", "gst_hsn_code"):
@@ -314,16 +319,64 @@ def get_hsn_summary_count(conditions, filters):
         hsn_col = "hsn_sac"
 
     if not hsn_col:
-        return 0
+        return {
+            "hsn_count": 0,
+            "inv_count": 0,
+            "taxable_amount": 0.0,
+            "cgst": 0.0,
+            "sgst": 0.0,
+            "igst": 0.0,
+            "cess": 0.0
+        }
+
+    item_col = "base_net_amount" if frappe.db.has_column("Purchase Invoice Item", "base_net_amount") else "net_amount"
 
     query = f"""
-        SELECT COUNT(DISTINCT pii.{hsn_col})
+        SELECT 
+            COUNT(DISTINCT pii.{hsn_col}) as hsn_count,
+            COUNT(DISTINCT pi.name) as inv_count,
+            COALESCE(SUM(pii.{item_col}), 0) as taxable_amount
         FROM `tabPurchase Invoice Item` pii
         JOIN `tabPurchase Invoice` pi ON pi.name = pii.parent
         WHERE {conditions} AND COALESCE(pii.{hsn_col}, '') != ''
     """
-    res = frappe.db.sql(query, filters)
-    return res[0][0] if res else 0
+    res = frappe.db.sql(query, filters, as_dict=True)
+    hsn_count = res[0].hsn_count if res else 0
+    inv_count = res[0].inv_count if res else 0
+    taxable_amount = flt(res[0].taxable_amount) if res else 0.0
+
+    has_base_tax = frappe.db.has_column("Purchase Taxes and Charges", "base_tax_amount_after_discount_amount")
+    tax_col = "base_tax_amount_after_discount_amount" if has_base_tax else "tax_amount"
+
+    tax_query = f"""
+        SELECT
+            SUM(CASE WHEN LOWER(account_head) LIKE '%%cgst%%' OR LOWER(account_head) LIKE '%%central tax%%' OR LOWER(account_head) LIKE '%%central gst%%' THEN {tax_col} ELSE 0 END) as cgst,
+            SUM(CASE WHEN LOWER(account_head) LIKE '%%sgst%%' OR LOWER(account_head) LIKE '%%state tax%%' OR LOWER(account_head) LIKE '%%state gst%%' OR LOWER(account_head) LIKE '%%utgst%%' THEN {tax_col} ELSE 0 END) as sgst,
+            SUM(CASE WHEN LOWER(account_head) LIKE '%%igst%%' OR LOWER(account_head) LIKE '%%integrated tax%%' OR LOWER(account_head) LIKE '%%integrated gst%%' THEN {tax_col} ELSE 0 END) as igst,
+            SUM(CASE WHEN LOWER(account_head) LIKE '%%cess%%' THEN {tax_col} ELSE 0 END) as cess
+        FROM `tabPurchase Taxes and Charges`
+        WHERE parent IN (
+            SELECT DISTINCT pi.name
+            FROM `tabPurchase Invoice` pi
+            JOIN `tabPurchase Invoice Item` pii ON pii.parent = pi.name
+            WHERE {conditions} AND COALESCE(pii.{hsn_col}, '') != ''
+        )
+    """
+    tax_res = frappe.db.sql(tax_query, filters, as_dict=True)
+    cgst = flt(tax_res[0].cgst) if tax_res else 0.0
+    sgst = flt(tax_res[0].sgst) if tax_res else 0.0
+    igst = flt(tax_res[0].igst) if tax_res else 0.0
+    cess = flt(tax_res[0].cess) if tax_res else 0.0
+
+    return {
+        "hsn_count": hsn_count,
+        "inv_count": inv_count,
+        "taxable_amount": taxable_amount,
+        "cgst": cgst,
+        "sgst": sgst,
+        "igst": igst,
+        "cess": cess
+    }
 
 
 def get_report_summary(itc_totals):
