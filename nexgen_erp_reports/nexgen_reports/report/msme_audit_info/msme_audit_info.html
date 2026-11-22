@@ -1,0 +1,52 @@
+<div class="print-format">
+    <div class="text-center" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-weight: bold; text-transform: uppercase;">{{ filters.company }}</h3>
+        <h4 style="margin: 5px 0; color: #1e3a8a;">MSME Audit Info.</h4>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 10px;">
+            <span><strong>Period:</strong> {{ frappe.datetime.str_to_user(filters.from_date) }} to {{ frappe.datetime.str_to_user(filters.to_date) }}</span>
+            <span><strong>On Basis of:</strong> {{ filters.date_basis }}</span>
+            <span><strong>Bills Status as on:</strong> {{ frappe.datetime.str_to_user(filters.as_on_date) }}</span>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-condensed" style="font-size: 10px;">
+        <thead style="background-color: #1e3a8a; color: #fff;">
+            <tr>
+                <th style="width: 15%;">Supplier Name</th>
+                <th style="width: 8%;">PAN</th>
+                <th style="width: 6%;">MSME</th>
+                <th style="width: 11%;">Udyam No.</th>
+                <th class="text-center" style="width: 5%;">TReDS Qty</th>
+                <th class="text-right" style="width: 9%;">TReDS (₹)</th>
+                <th class="text-center" style="width: 5%;">Other Qty</th>
+                <th class="text-right" style="width: 9%;">Other (₹)</th>
+                <th class="text-center" style="width: 5%;">Delay Qty</th>
+                <th class="text-right" style="width: 9%;">Delay (₹)</th>
+                <th class="text-center" style="width: 5%;">Pend Qty</th>
+                <th class="text-right" style="width: 9%;">Pending &le;45d</th>
+                <th class="text-center" style="width: 5%;">Overdue Qty</th>
+                <th class="text-right" style="width: 10%;">Overdue &gt;45d (43B(h))</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr {% if row.is_total_row %}style="background-color: #f1f5f9; font-weight: bold;"{% endif %}>
+                    <td>{{ row.supplier_name }}</td>
+                    <td>{{ row.pan }}</td>
+                    <td>{{ row.msme_status }}</td>
+                    <td>{{ row.udyam_no }}</td>
+                    <td class="text-center">{{ row.treds_count }}</td>
+                    <td class="text-right">{{ format_currency(row.treds_amt) if row.treds_amt else '-' }}</td>
+                    <td class="text-center">{{ row.other_count }}</td>
+                    <td class="text-right">{{ format_currency(row.other_amt) if row.other_amt else '-' }}</td>
+                    <td class="text-center">{{ row.delayed_count }}</td>
+                    <td class="text-right" style="color: #d97706;">{{ format_currency(row.delayed_amt) if row.delayed_amt else '-' }}</td>
+                    <td class="text-center">{{ row.pending_45_count }}</td>
+                    <td class="text-right">{{ format_currency(row.pending_45_amt) if row.pending_45_amt else '-' }}</td>
+                    <td class="text-center" style="color: #dc2626; font-weight: bold;">{{ row.overdue_45_count }}</td>
+                    <td class="text-right" style="color: #dc2626; font-weight: bold;">{{ format_currency(row.overdue_45_amt) if row.overdue_45_amt else '-' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
