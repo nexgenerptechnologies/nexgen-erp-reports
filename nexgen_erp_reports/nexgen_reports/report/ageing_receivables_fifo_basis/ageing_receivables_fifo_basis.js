@@ -48,12 +48,19 @@ frappe.query_reports["Ageing Receivables FIFO Basis"] = {
 			const party = $(this).attr("data-party");
 			const filters = report.get_values();
 
+			const report_date = filters.report_date || frappe.datetime.get_today();
+			const parts = report_date.split("-");
+			const year = parseInt(parts[0], 10);
+			const month = parseInt(parts[1], 10);
+			const fy_year = month >= 4 ? year : year - 1;
+			const from_date = fy_year + "-04-01";
+
 			const gl_filters = {
 				company: filters.company,
 				party_type: "Customer",
-				party: party,
-				from_date: frappe.datetime.year_start(),
-				to_date: filters.report_date
+				party: [party],
+				from_date: from_date,
+				to_date: report_date
 			};
 			if (window.history && window.history.replaceState) {
 				window.history.replaceState({}, document.title, window.location.pathname);
