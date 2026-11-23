@@ -211,15 +211,42 @@ def get_tax_account(company, tax_type):
 def sync_past_expense_invoices():
     """
     Scans past submitted Purchase Invoices that represent expenses/services
-    and creates corresponding Expense Invoice records.
+    and creates corresponding Expense Invoice records, and tags them
+    as is_expense_invoice = 1 so they are hidden from the stock purchase list.
     """
-    # Ensure custom fields exist first
+    # 1. Ensure custom fields exist first
     try:
         from nexgen_erp_reports.setup import setup_custom_fields
         setup_custom_fields()
     except Exception:
         pass
 
+    # 2. Tag ALL matching expense purchase invoices (including returns) as is_expense_invoice = 1
+    if frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
+        # Tag by expense item account
+        frappe.db.sql("""
+            UPDATE `tabPurchase Invoice` pi
+            JOIN `tabPurchase Invoice Item` pii ON pii.parent = pi.name
+            JOIN `tabAccount` acc ON acc.name = pii.expense_account
+            SET pi.is_expense_invoice = 1
+            WHERE pi.docstatus = 1
+              AND (pi.is_expense_invoice IS NULL OR pi.is_expense_invoice = 0)
+              AND acc.root_type = 'Expense'
+        """)
+
+        # Tag debit notes / returns whose original invoice is an expense invoice
+        frappe.db.sql("""
+            UPDATE `tabPurchase Invoice` ret
+            JOIN `tabPurchase Invoice` orig ON orig.name = ret.return_against
+            SET ret.is_expense_invoice = 1
+            WHERE ret.docstatus = 1
+              AND ret.is_return = 1
+              AND (ret.is_expense_invoice IS NULL OR ret.is_expense_invoice = 0)
+              AND orig.is_expense_invoice = 1
+        """)
+        frappe.db.commit()
+
+    # 3. Create Expense Invoice records for positive invoices (excluding returns)
     has_exp_col = frappe.db.has_column("Purchase Invoice", "expense_invoice")
     exp_condition = "AND (pi.expense_invoice IS NULL OR pi.expense_invoice = '')" if has_exp_col else ""
 
@@ -238,6 +265,7 @@ def sync_past_expense_invoices():
             pi.status
         FROM `tabPurchase Invoice` pi
         WHERE pi.docstatus = 1
+          AND COALESCE(pi.is_return, 0) = 0
           {exp_condition}
           AND EXISTS (
               SELECT 1 FROM `tabPurchase Invoice Item` pii
@@ -249,7 +277,7 @@ def sync_past_expense_invoices():
     """, as_dict=True)
 
     synced_count = 0
-    valid_statuses = ["Draft", "Submitted", "Paid", "Partly Paid", "Unpaid", "Overdue", "Return", "Cancelled"]
+    valid_statuses = ["Draft", "Submitted", "Paid", "Partly Paid", "Unpaid", "Overdue", "Cancelled"]
 
     for inv in invoices:
         try:
@@ -289,10 +317,7 @@ def sync_past_expense_invoices():
             exp.flags.ignore_mandatory = True
             exp.insert()
 
-            # Update Purchase Invoice flag
-            if frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
-                frappe.db.set_value("Purchase Invoice", inv.name, "is_expense_invoice", 1)
-            if frappe.db.has_column("Purchase Invoice", "expense_invoice"):
+            if has_exp_col:
                 frappe.db.set_value("Purchase Invoice", inv.name, "expense_invoice", exp.name)
 
             synced_count += 1
@@ -300,7 +325,8 @@ def sync_past_expense_invoices():
             frappe.log_error(title="Sync Past Expense Invoice", message=f"Error syncing {inv.name}: {str(e)}")
             continue
 
-    frappe.msgprint(_("Successfully synced {0} past expense invoices.").format(synced_count))
+    frappe.message_log = []
+    frappe.msgprint(_("Expense invoices synced and tagged successfully! (New records created: {0})").format(synced_count))
 
     return {"synced": synced_count}
 
