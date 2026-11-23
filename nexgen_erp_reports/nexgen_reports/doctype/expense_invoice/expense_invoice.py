@@ -249,50 +249,58 @@ def sync_past_expense_invoices():
     """, as_dict=True)
 
     synced_count = 0
+    valid_statuses = ["Draft", "Submitted", "Paid", "Partly Paid", "Unpaid", "Overdue", "Return", "Cancelled"]
+
     for inv in invoices:
-        # Check if already synced
-        if frappe.db.exists("Expense Invoice", {"purchase_invoice": inv.name}):
+        try:
+            # Check if already synced
+            if frappe.db.exists("Expense Invoice", {"purchase_invoice": inv.name}):
+                continue
+
+            exp = frappe.new_doc("Expense Invoice")
+            exp.company = inv.company
+            exp.supplier = inv.supplier
+            exp.bill_no = inv.bill_no or inv.name
+            exp.bill_date = inv.bill_date or inv.posting_date
+            exp.posting_date = inv.posting_date
+            exp.due_date = inv.due_date
+            exp.purchase_invoice = inv.name
+            exp.status = inv.status if inv.status in valid_statuses else "Submitted"
+            exp.outstanding_amount = inv.outstanding_amount
+
+            # Items
+            items = frappe.db.sql("""
+                SELECT pii.expense_account, pii.description, pii.amount
+                FROM `tabPurchase Invoice Item` pii
+                WHERE pii.parent = %s
+            """, (inv.name,), as_dict=True)
+
+            for it in items:
+                exp.append("items", {
+                    "expense_account": it.expense_account,
+                    "description": it.description or it.expense_account,
+                    "amount": flt(it.amount),
+                    "total_amount": flt(it.amount)
+                })
+
+            exp.calculate_taxes_and_totals()
+            exp.docstatus = 1
+            exp.flags.ignore_permissions = True
+            exp.flags.ignore_mandatory = True
+            exp.insert()
+
+            # Update Purchase Invoice flag
+            if frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
+                frappe.db.set_value("Purchase Invoice", inv.name, "is_expense_invoice", 1)
+            if frappe.db.has_column("Purchase Invoice", "expense_invoice"):
+                frappe.db.set_value("Purchase Invoice", inv.name, "expense_invoice", exp.name)
+
+            synced_count += 1
+        except Exception as e:
+            frappe.log_error(title="Sync Past Expense Invoice", message=f"Error syncing {inv.name}: {str(e)}")
             continue
 
-        exp = frappe.new_doc("Expense Invoice")
-        exp.company = inv.company
-        exp.supplier = inv.supplier
-        exp.bill_no = inv.bill_no or inv.name
-        exp.bill_date = inv.bill_date or inv.posting_date
-        exp.posting_date = inv.posting_date
-        exp.due_date = inv.due_date
-        exp.purchase_invoice = inv.name
-        exp.status = inv.status
-        exp.outstanding_amount = inv.outstanding_amount
-
-        # Items
-        items = frappe.db.sql("""
-            SELECT pii.expense_account, pii.description, pii.amount
-            FROM `tabPurchase Invoice Item` pii
-            WHERE pii.parent = %s
-        """, (inv.name,), as_dict=True)
-
-        for it in items:
-            exp.append("items", {
-                "expense_account": it.expense_account,
-                "description": it.description or it.expense_account,
-                "amount": flt(it.amount),
-                "total_amount": flt(it.amount)
-            })
-
-        exp.calculate_taxes_and_totals()
-        exp.docstatus = 1
-        exp.flags.ignore_permissions = True
-        exp.flags.ignore_mandatory = True
-        exp.insert()
-
-        # Update Purchase Invoice flag
-        if frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
-            frappe.db.set_value("Purchase Invoice", inv.name, "is_expense_invoice", 1)
-        if frappe.db.has_column("Purchase Invoice", "expense_invoice"):
-            frappe.db.set_value("Purchase Invoice", inv.name, "expense_invoice", exp.name)
-
-        synced_count += 1
+    frappe.msgprint(_("Successfully synced {0} past expense invoices.").format(synced_count))
 
     return {"synced": synced_count}
 
