@@ -163,23 +163,6 @@ def get_data(filters):
     """
     suppliers_list = frappe.db.sql(suppliers_query, supplier_params, as_dict=True)
 
-    # If MSME filter resulted in 0 suppliers (e.g. before user has marked them), fallback to suppliers with invoices
-    if not suppliers_list and msme_filter in ["All MSME (Micro & Small & Medium)", "Micro & Small (Sec 43B(h))"]:
-        fallback_query = f"""
-            SELECT
-                s.name,
-                s.supplier_name,
-                s.pan,
-                {msme_expr},
-                {udyam_expr}
-            FROM `tabSupplier` s
-            WHERE EXISTS (
-                SELECT 1 FROM `tabPurchase Invoice` pi
-                WHERE pi.supplier = s.name AND pi.company = %(company)s AND pi.docstatus = 1
-            )
-        """
-        suppliers_list = frappe.db.sql(fallback_query, {"company": company}, as_dict=True)
-
     if not suppliers_list:
         return [], {}
 
@@ -270,7 +253,7 @@ def get_data(filters):
         supplier_agg[s_name] = {
             "supplier_name": s_obj.supplier_name or s_name,
             "pan": s_obj.pan or "",
-            "msme_status": s_obj.msme_status or "Micro",
+            "msme_status": s_obj.msme_status or "",
             "udyam_no": s_obj.udyam_no or "",
             "treds_count": 0,
             "treds_amt": 0.0,

@@ -213,7 +213,17 @@ def sync_past_expense_invoices():
     Scans past submitted Purchase Invoices that represent expenses/services
     and creates corresponding Expense Invoice records.
     """
-    invoices = frappe.db.sql("""
+    # Ensure custom fields exist first
+    try:
+        from nexgen_erp_reports.setup import setup_custom_fields
+        setup_custom_fields()
+    except Exception:
+        pass
+
+    has_exp_col = frappe.db.has_column("Purchase Invoice", "expense_invoice")
+    exp_condition = "AND (pi.expense_invoice IS NULL OR pi.expense_invoice = '')" if has_exp_col else ""
+
+    invoices = frappe.db.sql(f"""
         SELECT
             pi.name,
             pi.company,
@@ -228,7 +238,7 @@ def sync_past_expense_invoices():
             pi.status
         FROM `tabPurchase Invoice` pi
         WHERE pi.docstatus = 1
-          AND (pi.expense_invoice IS NULL OR pi.expense_invoice = '')
+          {exp_condition}
           AND EXISTS (
               SELECT 1 FROM `tabPurchase Invoice Item` pii
               JOIN `tabAccount` acc ON acc.name = pii.expense_account
