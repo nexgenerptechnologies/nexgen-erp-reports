@@ -18,27 +18,40 @@ def tag_expense_invoices():
     if not frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
         return
 
-    # 1. Tag by line item expense accounts
+    # 1. Tag all invoices with EXP- naming series (Formax's expense series)
+    # across ALL statuses (Draft, Submitted, Overdue, Paid, Cancelled)
+    frappe.db.sql("""
+        UPDATE `tabPurchase Invoice`
+        SET is_expense_invoice = 1
+        WHERE name LIKE 'EXP-%'
+    """)
+
+    # 2. Tag all debit notes / returns created against EXP- series invoices
+    frappe.db.sql("""
+        UPDATE `tabPurchase Invoice`
+        SET is_expense_invoice = 1
+        WHERE return_against LIKE 'EXP-%'
+    """)
+
+    # 3. Tag by line item expense accounts (Profit and Loss / Expense accounts)
     frappe.db.sql("""
         UPDATE `tabPurchase Invoice` pi
         JOIN `tabPurchase Invoice Item` pii ON pii.parent = pi.name
         JOIN `tabAccount` acc ON acc.name = pii.expense_account
         SET pi.is_expense_invoice = 1
-        WHERE pi.docstatus = 1
-          AND acc.root_type = 'Expense'
+        WHERE acc.root_type LIKE '%Expense%'
+           OR acc.report_type = 'Profit and Loss'
     """)
 
-    # 2. Tag debit notes / returns whose original invoice is an expense invoice
+    # 4. Tag debit notes / returns whose original invoice is an expense invoice
     frappe.db.sql("""
         UPDATE `tabPurchase Invoice` ret
         JOIN `tabPurchase Invoice` orig ON orig.name = ret.return_against
         SET ret.is_expense_invoice = 1
-        WHERE ret.docstatus = 1
-          AND ret.is_return = 1
-          AND orig.is_expense_invoice = 1
+        WHERE orig.is_expense_invoice = 1
     """)
 
-    # 3. Tag any invoice that already has a linked Expense Invoice document
+    # 5. Tag any invoice that already has a linked Expense Invoice document
     if frappe.db.has_column("Purchase Invoice", "expense_invoice"):
         frappe.db.sql("""
             UPDATE `tabPurchase Invoice` pi

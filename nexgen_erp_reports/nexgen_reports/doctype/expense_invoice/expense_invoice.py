@@ -214,37 +214,13 @@ def sync_past_expense_invoices():
     and creates corresponding Expense Invoice records, and tags them
     as is_expense_invoice = 1 so they are hidden from the stock purchase list.
     """
-    # 1. Ensure custom fields exist first
+    # 1. Ensure custom fields exist and tag all past invoices
     try:
-        from nexgen_erp_reports.setup import setup_custom_fields
+        from nexgen_erp_reports.setup import setup_custom_fields, tag_expense_invoices
         setup_custom_fields()
+        tag_expense_invoices()
     except Exception:
         pass
-
-    # 2. Tag ALL matching expense purchase invoices (including returns) as is_expense_invoice = 1
-    if frappe.db.has_column("Purchase Invoice", "is_expense_invoice"):
-        # Tag by expense item account
-        frappe.db.sql("""
-            UPDATE `tabPurchase Invoice` pi
-            JOIN `tabPurchase Invoice Item` pii ON pii.parent = pi.name
-            JOIN `tabAccount` acc ON acc.name = pii.expense_account
-            SET pi.is_expense_invoice = 1
-            WHERE pi.docstatus = 1
-              AND (pi.is_expense_invoice IS NULL OR pi.is_expense_invoice = 0)
-              AND acc.root_type = 'Expense'
-        """)
-
-        # Tag debit notes / returns whose original invoice is an expense invoice
-        frappe.db.sql("""
-            UPDATE `tabPurchase Invoice` ret
-            JOIN `tabPurchase Invoice` orig ON orig.name = ret.return_against
-            SET ret.is_expense_invoice = 1
-            WHERE ret.docstatus = 1
-              AND ret.is_return = 1
-              AND (ret.is_expense_invoice IS NULL OR ret.is_expense_invoice = 0)
-              AND orig.is_expense_invoice = 1
-        """)
-        frappe.db.commit()
 
     # 3. Create Expense Invoice records for positive invoices (excluding returns)
     has_exp_col = frappe.db.has_column("Purchase Invoice", "expense_invoice")
