@@ -83,46 +83,17 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 			const purchaseSections = ["6B", "6C", "6D", "6E", "6F", "7E", "16A"];
 
 			if (salesSections.includes(sectionCode)) {
-				const route_params = {
-					company: filters.company,
-					docstatus: 1
-				};
-
-				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-				}
-
-				if (sectionCode === "4A") {
-					route_params["gst_category"] = "Unregistered";
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "4B") {
-					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "4C" || sectionCode === "5A") {
-					route_params["gst_category"] = "Overseas";
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "4D" || sectionCode === "5B") {
-					route_params["gst_category"] = "SEZ";
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "4E") {
-					route_params["gst_category"] = "Deemed Export";
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "4I" || sectionCode === "5H") {
-					route_params["is_return"] = 1;
-				} else if (sectionCode === "5D") {
-					route_params["gst_category"] = "Exempt";
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "5E") {
-					route_params["gst_category"] = "Nil Rated";
-					route_params["is_return"] = 0;
-				}
-
 				if (window.history && window.history.replaceState) {
 					window.history.replaceState({}, document.title, window.location.pathname);
 				}
 
-				frappe.route_options = route_params;
-				frappe.set_route("List", "Sales Invoice");
+				frappe.route_options = {
+					company: filters.company,
+					from_date: filters.from_date,
+					to_date: filters.to_date,
+					section_code: sectionCode
+				};
+				frappe.set_route("query-report", "GSTR-9 Outward Invoice Details");
 			} else if (purchaseSections.includes(sectionCode)) {
 				let gstr2b_section = "All Sections";
 				if (sectionCode === "6B") gstr2b_section = "3_4A";
