@@ -16,6 +16,34 @@ frappe.ui.form.on("Expense Invoice", {
 	},
 
 	refresh: function(frm) {
+		if (frm.doc.docstatus === 1) {
+			// Override Cancel action to smoothly cancel both Expense Invoice and background Purchase Invoice without circular dependency deadlock
+			setTimeout(function() {
+				frm.page.set_secondary_action(__("Cancel"), function() {
+					frappe.confirm(
+						__("Are you sure you want to cancel Expense Invoice <b>{0}</b> and its linked Purchase Invoice?", [frm.doc.name]),
+						function() {
+							frappe.call({
+								method: "nexgen_erp_reports.nexgen_reports.doctype.expense_invoice.expense_invoice.cancel_expense_invoice",
+								args: { expense_invoice_name: frm.doc.name },
+								freeze: true,
+								freeze_message: __("Cancelling Expense Invoice and linked transactions..."),
+								callback: function(r) {
+									if (r.message) {
+										frappe.show_alert({
+											message: __("Expense Invoice {0} cancelled successfully", [frm.doc.name]),
+											indicator: "green"
+										});
+										frm.reload_doc();
+									}
+								}
+							});
+						}
+					);
+				});
+			}, 200);
+		}
+
 		if (frm.doc.docstatus === 1 && frm.doc.purchase_invoice) {
 			// Button: View Purchase Invoice
 			frm.add_custom_button(__("View Purchase Invoice"), function() {

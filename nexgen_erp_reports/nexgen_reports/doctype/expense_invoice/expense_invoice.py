@@ -67,11 +67,16 @@ class ExpenseInvoice(Document):
             self.db_set("purchase_invoice", pi_name)
             self.db_set("status", "Submitted")
 
-    def on_cancel(self):
+    def before_cancel(self):
+        self.flags.ignore_links = True
         if self.purchase_invoice and frappe.db.exists("Purchase Invoice", self.purchase_invoice):
+            frappe.db.set_value("Purchase Invoice", self.purchase_invoice, "expense_invoice", None)
             pi = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
             if pi.docstatus == 1:
+                pi.flags.ignore_links = True
                 pi.cancel()
+
+    def on_cancel(self):
         self.db_set("status", "Cancelled")
 
     def create_and_submit_purchase_invoice(self):
@@ -317,3 +322,27 @@ def make_payment_entry(expense_invoice_name):
     from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
     pe = get_payment_entry("Purchase Invoice", exp.purchase_invoice)
     return pe
+
+
+@frappe.whitelist()
+def cancel_expense_invoice(expense_invoice_name):
+    """Cleanly cancels both the Expense Invoice and its background Purchase Invoice without circular lock"""
+    exp = frappe.get_doc("Expense Invoice", expense_invoice_name)
+    if exp.docstatus == 2:
+        return True
+
+    # 1. Cancel background Purchase Invoice
+    if exp.purchase_invoice and frappe.db.exists("Purchase Invoice", exp.purchase_invoice):
+        # Remove reverse link first to prevent circular dependency deadlock
+        frappe.db.set_value("Purchase Invoice", exp.purchase_invoice, "expense_invoice", None)
+        pi = frappe.get_doc("Purchase Invoice", exp.purchase_invoice)
+        if pi.docstatus == 1:
+            pi.flags.ignore_links = True
+            pi.cancel()
+
+    # 2. Cancel Expense Invoice
+    exp.flags.ignore_links = True
+    exp.cancel()
+    exp.db_set("status", "Cancelled")
+    return True
+
