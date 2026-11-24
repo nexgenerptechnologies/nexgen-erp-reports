@@ -134,7 +134,7 @@ class ExpenseInvoice(Document):
 
         if self.cgst_amount > 0 and cgst_acc:
             pi.append("taxes", {
-                "charge_type": "Actual",
+                "charge_type": "On Net Total",
                 "account_head": cgst_acc,
                 "rate": half_rate,
                 "tax_amount": self.cgst_amount,
@@ -142,7 +142,7 @@ class ExpenseInvoice(Document):
             })
         if self.sgst_amount > 0 and sgst_acc:
             pi.append("taxes", {
-                "charge_type": "Actual",
+                "charge_type": "On Net Total",
                 "account_head": sgst_acc,
                 "rate": half_rate,
                 "tax_amount": self.sgst_amount,
@@ -150,7 +150,7 @@ class ExpenseInvoice(Document):
             })
         if self.igst_amount > 0 and igst_acc:
             pi.append("taxes", {
-                "charge_type": "Actual",
+                "charge_type": "On Net Total",
                 "account_head": igst_acc,
                 "rate": full_rate,
                 "tax_amount": self.igst_amount,

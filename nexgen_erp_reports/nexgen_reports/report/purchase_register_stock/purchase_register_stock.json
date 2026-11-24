@@ -1,0 +1,42 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "creation": "2026-11-24 10:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "is_standard": "Yes",
+ "modified": "2026-11-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Nexgen Reports",
+ "name": "Purchase Register Stock",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Purchase Invoice",
+ "report_name": "Purchase Register Stock",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Purchase Manager"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Auditor"
+  }
+ ]
+}

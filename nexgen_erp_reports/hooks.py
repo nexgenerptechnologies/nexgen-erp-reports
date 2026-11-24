@@ -10,8 +10,3 @@ required_apps = ["frappe", "erpnext"]
 # App Setup & Migrations
 after_migrate = "nexgen_erp_reports.setup.after_migrate"
 after_install = "nexgen_erp_reports.setup.after_migrate"
-
-# Document Events & Client Hooks
-doctype_list_js = {
-	"Purchase Invoice": "public/js/purchase_invoice_list_custom.js"
-}
