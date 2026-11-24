@@ -126,7 +126,8 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 			} else if (purchaseSections.includes(sectionCode)) {
 				const route_params = {
 					company: filters.company,
-					docstatus: 1
+					docstatus: 1,
+					is_expense_invoice: ["in", [0, 1]]
 				};
 
 				if (filters.from_date && filters.to_date) {
