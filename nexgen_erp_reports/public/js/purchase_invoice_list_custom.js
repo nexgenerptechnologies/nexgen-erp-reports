@@ -11,18 +11,15 @@ frappe.listview_settings["Purchase Invoice"] = Object.assign(frappe.listview_set
 			orig_pi_onload(listview);
 		}
 
-		// Filter out expense invoices by default so only trade/inventory purchases are shown
+		// Hide expense invoices by default so only stock/inventory purchases appear in daily procurement view
 		setTimeout(function() {
 			if (listview && listview.filter_area) {
 				const filters = listview.filter_area.get();
-				const has_filter = filters.some(function(f) {
+				const has_exp_filter = filters.some(function(f) {
 					return f[1] === "is_expense_invoice" || f[0] === "is_expense_invoice";
 				});
-				if (!has_filter && (!frappe.route_options || frappe.route_options.is_expense_invoice === undefined)) {
-					// Do not force is_expense_invoice = 0 if arriving from GST audit/reconciliation drill-down
-					if (!frappe.route_options || (!frappe.route_options.gst_category && !frappe.route_options.reverse_charge)) {
-						listview.filter_area.add([["Purchase Invoice", "is_expense_invoice", "=", 0]]);
-					}
+				if (!has_exp_filter && (!frappe.route_options || frappe.route_options.is_expense_invoice === undefined)) {
+					listview.filter_area.add([["Purchase Invoice", "is_expense_invoice", "=", 0]]);
 				}
 			}
 		}, 100);

@@ -64,43 +64,19 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 				return;
 			}
 
-			const route_params = {
-				company: filters.company,
-				docstatus: 1,
-				is_expense_invoice: ["in", [0, 1]]
-			};
-
-			if (filters.from_date && filters.to_date) {
-				route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-			}
-
-			if (sectionCode === "3_4A") {
-				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
-				route_params["is_return"] = 0;
-			} else if (sectionCode === "4B") {
-				route_params["gst_category"] = "Unregistered";
-				route_params["is_return"] = 0;
-			} else if (sectionCode === "6C") {
-				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
-				route_params["is_return"] = 1;
-			} else if (sectionCode === "6C_UR") {
-				route_params["gst_category"] = "Unregistered";
-				route_params["is_return"] = 1;
-			} else if (sectionCode === "5A_5B" || sectionCode === "4C") {
-				route_params["gst_category"] = "Overseas";
-				route_params["is_return"] = 0;
-			} else if (sectionCode === "7A_7B") {
-				route_params["is_return"] = 0;
-			} else if (sectionCode === "ITC_REV") {
-				route_params["eligibility_for_itc"] = ["like", "%Ineligible%"];
-			}
-
 			if (window.history && window.history.replaceState) {
 				window.history.replaceState({}, document.title, window.location.pathname);
 			}
 
-			frappe.route_options = route_params;
-			frappe.set_route("List", "Purchase Invoice");
+			// Open Dedicated Detailed Inward Invoices Register
+			frappe.route_options = {
+				company: filters.company,
+				from_date: filters.from_date,
+				to_date: filters.to_date,
+				section_code: sectionCode,
+				supply_type: "All"
+			};
+			frappe.set_route("query-report", "GSTR-2B Inward Invoice Details");
 		});
 	},
 

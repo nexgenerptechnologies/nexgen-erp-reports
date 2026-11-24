@@ -124,38 +124,25 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 				frappe.route_options = route_params;
 				frappe.set_route("List", "Sales Invoice");
 			} else if (purchaseSections.includes(sectionCode)) {
-				const route_params = {
-					company: filters.company,
-					docstatus: 1,
-					is_expense_invoice: ["in", [0, 1]]
-				};
-
-				if (filters.from_date && filters.to_date) {
-					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
-				}
-
-				if (sectionCode === "6B") {
-					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
-					route_params["is_return"] = 0;
-				} else if (sectionCode === "6C") {
-					route_params["gst_category"] = "Unregistered";
-					route_params["reverse_charge"] = "Y";
-				} else if (sectionCode === "6D") {
-					route_params["reverse_charge"] = "Y";
-				} else if (sectionCode === "6E" || sectionCode === "6F") {
-					route_params["gst_category"] = "Overseas";
-				} else if (sectionCode === "7E") {
-					route_params["eligibility_for_itc"] = ["like", "%Ineligible%"];
-				} else if (sectionCode === "16A") {
-					route_params["gst_category"] = "Composition";
-				}
+				let gstr2b_section = "All Sections";
+				if (sectionCode === "6B") gstr2b_section = "3_4A";
+				else if (sectionCode === "6C") gstr2b_section = "4B";
+				else if (sectionCode === "6E") gstr2b_section = "5A_5B";
+				else if (sectionCode === "6F") gstr2b_section = "4C";
+				else if (sectionCode === "7E") gstr2b_section = "ITC_REV";
 
 				if (window.history && window.history.replaceState) {
 					window.history.replaceState({}, document.title, window.location.pathname);
 				}
 
-				frappe.route_options = route_params;
-				frappe.set_route("List", "Purchase Invoice");
+				frappe.route_options = {
+					company: filters.company,
+					from_date: filters.from_date,
+					to_date: filters.to_date,
+					section_code: gstr2b_section,
+					supply_type: "All"
+				};
+				frappe.set_route("query-report", "GSTR-2B Inward Invoice Details");
 			}
 		});
 	},
