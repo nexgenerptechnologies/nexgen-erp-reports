@@ -69,6 +69,10 @@ frappe.query_reports["GSTR-2B Inward Summary"] = {
 				docstatus: 1
 			};
 
+			if (filters.from_date && filters.to_date) {
+				route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
+			}
+
 			if (sectionCode === "3_4A") {
 				route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
 				route_params["is_return"] = 0;

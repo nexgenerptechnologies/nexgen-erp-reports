@@ -88,6 +88,10 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 					docstatus: 1
 				};
 
+				if (filters.from_date && filters.to_date) {
+					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
+				}
+
 				if (sectionCode === "4A") {
 					route_params["gst_category"] = "Unregistered";
 					route_params["is_return"] = 0;
@@ -124,6 +128,10 @@ frappe.query_reports["GSTR-9 Annual Return"] = {
 					company: filters.company,
 					docstatus: 1
 				};
+
+				if (filters.from_date && filters.to_date) {
+					route_params["posting_date"] = ["between", [filters.from_date, filters.to_date]];
+				}
 
 				if (sectionCode === "6B") {
 					route_params["gst_category"] = ["in", ["Registered Regular", "Registered Composition", "SEZ", "Deemed Export"]];
